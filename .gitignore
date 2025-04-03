@@ -1,0 +1,9 @@
+# dank-mcp .gitignore
+
+.task
+.DS_Store
+bin/
+dist/
+
+# don't commit cache files!
+.dank

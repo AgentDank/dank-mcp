@@ -1,0 +1,55 @@
+version: '3'
+
+tasks:
+  default:
+    desc: 'Default task is to "build"'
+    deps:
+      - build
+
+  list:
+    desc: 'Lists available tasks'
+    cmds:
+      - task --list-all
+
+  tidy:
+    desc: 'Tidy all'
+    cmds:
+      - go mod tidy
+    sources:
+      - "*.go"
+      - "data/**/**/*.go"
+      - "internal/**/*.go"
+      - go.mod
+      - go.sum
+
+  build:
+    desc: 'Build the dank-mcp service'
+    deps: [tidy]
+    cmds:
+      - go build -o bin/dank-mcp
+    generates:
+      - bin/dank-mcp
+    sources:
+      - "*.go"
+      - "data/**/**/*.go"
+      - "internal/**/*.go"
+      - go.mod
+      - go.sum
+
+  clean-cache:
+    desc: 'Clean cache dir'
+    cmds:
+      - rm -rf .dank
+
+  clean:
+    desc: 'Clean all build products'
+    deps: [clean-cache]
+    cmds:
+      - rm -f bin/dank-mcp
+
+  stdio-schema:
+    desc: 'Extracts the schema from the stdio server'
+    deps: [build]
+    cmds:
+      - echo '{"method":"tools/list","params":{},"jsonrpc":"2.0","id":1}' | ./bin/dank-mcp --no-fetch 2>/dev/null
+      - echo '{"method":"resources/list","params":{},"jsonrpc":"2.0","id":1}' | ./bin/dank-mcp --no-fetch 2>/dev/null

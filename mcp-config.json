@@ -1,0 +1,11 @@
+{
+    "mcpServers": {
+      "dank": {
+        "command": "./bin/dank-mcp",
+        "args": [
+          "--root", "/tmp"
+        ]
+      }
+    }
+  }
+  
