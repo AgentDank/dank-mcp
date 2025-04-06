@@ -1,12 +1,15 @@
-# dank-mcp
+# AgentDank: &nbsp;&nbsp; `dank-mcp`
 
-`dank-mcp` is a Model Context Procotol (MCP) server that respond to questions about supported Cannabis Datasets. 
+`dank-mcp` is a Model Context Procotol (MCP) server that respond to questions about supported Cannabis Datasets.  It is brought to you by AgentDank for educational and legal purposes.
 
 Here's example conversations with [Claude Desktop](#claude-desktop).  You are viewing these links on the Claude.ai website; when using this `dank-mcp` yourself, you must use Claude **Desktop** to utilize the MCP server.   Within the chat, you can expand the Tools call sections to see the SQL requests and CSV results.
 
  * ["Finding the Dankest Cannabis Flower in CT"](https://claude.ai/share/e64bb066-ffb5-459b-bb0e-8cdb4f5007c2)
  * ["Spicy Cannabis Edibles for Sleep"](https://claude.ai/share/8229f9b9-91b6-433d-8b5c-20d0b577fa23)
  * ["Sedative Cannabis Flower Recommendations"](https://claude.ai/share/924f8fcc-0785-4c9f-9902-97c8d3a00658)
+
+
+<p align="center"><video controls src="https://private-user-images.githubusercontent.com/26842/430672597-adb8e56f-178d-4646-9e0f-4fcf57614dea.mp4" title="AgentDank "></video></p>
 
 ----
 
