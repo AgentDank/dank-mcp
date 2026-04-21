@@ -89,3 +89,9 @@ func MakeCacheFile(filename string) (*os.File, error) {
 
 	return cacheFile, nil
 }
+
+// GetDatasetCachePath returns the canonical on-disk path for a dataset's
+// downloaded DuckDB under the dank root: .dank/cache/<id>/dank-data.duckdb
+func GetDatasetCachePath(id string) string {
+	return filepath.Join(GetDankCacheDir(), filepath.FromSlash(id), "dank-data.duckdb")
+}
