@@ -4,12 +4,20 @@
 package catalog
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
+	"io"
+	"net/http"
 	"sort"
 )
 
-const currentVersion = 1
+const (
+	currentVersion = 1
+
+	// DefaultURL is the well-known location of the dank-data catalog.
+	DefaultURL = "https://raw.githubusercontent.com/AgentDank/dank-data/main/snapshots/catalog.json"
+)
 
 // Catalog is the parsed catalog.json document.
 type Catalog struct {
@@ -58,4 +66,29 @@ func (c Catalog) Lookup(id string) (DatasetEntry, error) {
 	}
 	sort.Strings(known)
 	return DatasetEntry{}, fmt.Errorf("unknown dataset %q; known ids: %v", id, known)
+}
+
+// Fetch retrieves and parses the catalog at url. Pass nil for client to use
+// http.DefaultClient.
+func Fetch(ctx context.Context, url string, client *http.Client) (Catalog, error) {
+	if client == nil {
+		client = http.DefaultClient
+	}
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
+	if err != nil {
+		return Catalog{}, fmt.Errorf("build catalog request: %w", err)
+	}
+	resp, err := client.Do(req)
+	if err != nil {
+		return Catalog{}, fmt.Errorf("fetch catalog: %w", err)
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		return Catalog{}, fmt.Errorf("fetch catalog: HTTP %d", resp.StatusCode)
+	}
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return Catalog{}, fmt.Errorf("read catalog body: %w", err)
+	}
+	return Parse(body)
 }

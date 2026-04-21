@@ -3,6 +3,9 @@
 package catalog
 
 import (
+	"context"
+	"net/http"
+	"net/http/httptest"
 	"strings"
 	"testing"
 )
@@ -98,5 +101,37 @@ func TestLookup_MissIncludesKnownIDs(t *testing.T) {
 	}
 	if !strings.Contains(err.Error(), "us/ct") {
 		t.Errorf("error should list known ids: %v", err)
+	}
+}
+
+func TestFetch_HappyPath(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/catalog.json" {
+			http.NotFound(w, r)
+			return
+		}
+		w.Header().Set("Content-Type", "application/json")
+		w.Write([]byte(validCatalog))
+	}))
+	defer srv.Close()
+
+	cat, err := Fetch(context.Background(), srv.URL+"/catalog.json", srv.Client())
+	if err != nil {
+		t.Fatalf("Fetch: %v", err)
+	}
+	if cat.Version != 1 {
+		t.Errorf("Version = %d", cat.Version)
+	}
+}
+
+func TestFetch_404(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		http.NotFound(w, r)
+	}))
+	defer srv.Close()
+
+	_, err := Fetch(context.Background(), srv.URL+"/catalog.json", srv.Client())
+	if err == nil {
+		t.Fatal("expected error")
 	}
 }
