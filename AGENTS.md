@@ -28,6 +28,20 @@ The project is moving from per-dataset Go code toward **declarative dataset bind
 - `internal/mcp/` — `server.go` (router + `ToolMap` pattern) and `tool.go` (the generic `query` tool).
 - `pkg/dank/` — the binding contracts (currently types only; no implementations yet).
 
+## Dataset catalog
+
+Datasets are resolved via a remote `catalog.json` hosted at:
+
+```
+https://raw.githubusercontent.com/AgentDank/dank-data/main/snapshots/catalog.json
+```
+
+- Schema: see `docs/superpowers/specs/2026-04-21-dank-data-catalog-download-design.md`.
+- Client code lives in `internal/catalog` (fetch + parse + lookup) and `internal/fetch` (download pipeline: sha256-verify → zstd-decompress → atomic rename).
+- Cache layout: `.dank/cache/<id>/dank-data.duckdb`.
+- TTL: 7 days. Override with `--force`.
+- Offline degrade: a catalog or download failure with an existing cache logs `slog.Warn` and proceeds using the stale cache; no cache → hard error.
+
 ## Do / Don't
 
 **Do:**
