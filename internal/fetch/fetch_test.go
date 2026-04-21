@@ -15,6 +15,7 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+	"time"
 
 	"github.com/klauspost/compress/zstd"
 )
@@ -153,5 +154,88 @@ func TestDownload_Catalog404(t *testing.T) {
 	})
 	if err == nil {
 		t.Fatal("expected error")
+	}
+}
+
+func TestDownload_TTLSkip(t *testing.T) {
+	tmp := t.TempDir()
+	cachePath := filepath.Join(tmp, "dank-data.duckdb")
+	// Pre-populate cache with recent mtime
+	if err := os.WriteFile(cachePath, []byte("prior-good"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	// httptest server that panics on any request (TTL skip should hit nothing)
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		t.Errorf("unexpected request to %s", r.URL.Path)
+	}))
+	defer srv.Close()
+
+	path, err := Download(context.Background(), "us/ct", Options{
+		CatalogURL: srv.URL + "/catalog.json",
+		CachePath:  cachePath,
+		Client:     srv.Client(),
+		Logger:     slog.New(slog.NewTextHandler(io.Discard, nil)),
+	})
+	if err != nil {
+		t.Fatalf("Download: %v", err)
+	}
+	if path != cachePath {
+		t.Errorf("path = %q", path)
+	}
+	got, _ := os.ReadFile(cachePath)
+	if string(got) != "prior-good" {
+		t.Errorf("cache mutated: %q", got)
+	}
+}
+
+func TestDownload_TTLSkipBypassedByForce(t *testing.T) {
+	compressed, shaHex, payload := buildSnapshot(t)
+	srv := startServer(t, compressed, shaHex)
+	defer srv.Close()
+
+	tmp := t.TempDir()
+	cachePath := filepath.Join(tmp, "dank-data.duckdb")
+	os.WriteFile(cachePath, []byte("prior-good"), 0o644)
+
+	_, err := Download(context.Background(), "us/ct", Options{
+		CatalogURL: srv.URL + "/catalog.json",
+		CachePath:  cachePath,
+		Client:     srv.Client(),
+		Logger:     slog.New(slog.NewTextHandler(io.Discard, nil)),
+		Force:      true,
+	})
+	if err != nil {
+		t.Fatalf("Download: %v", err)
+	}
+	got, _ := os.ReadFile(cachePath)
+	if !bytes.Equal(got, payload) {
+		t.Errorf("cache not refreshed; got %q", got)
+	}
+}
+
+func TestDownload_StalePast7Days(t *testing.T) {
+	compressed, shaHex, payload := buildSnapshot(t)
+	srv := startServer(t, compressed, shaHex)
+	defer srv.Close()
+
+	tmp := t.TempDir()
+	cachePath := filepath.Join(tmp, "dank-data.duckdb")
+	os.WriteFile(cachePath, []byte("old"), 0o644)
+	old := time.Now().Add(-8 * 24 * time.Hour)
+	os.Chtimes(cachePath, old, old)
+
+	_, err := Download(context.Background(), "us/ct", Options{
+		CatalogURL: srv.URL + "/catalog.json",
+		CachePath:  cachePath,
+		Client:     srv.Client(),
+		Logger:     slog.New(slog.NewTextHandler(io.Discard, nil)),
+	})
+	if err != nil {
+		t.Fatalf("Download: %v", err)
+	}
+	got, _ := os.ReadFile(cachePath)
+	if !bytes.Equal(got, payload) {
+		t.Errorf("cache not refreshed; got %q", got)
 	}
 }

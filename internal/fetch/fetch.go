@@ -11,9 +11,12 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"time"
 
 	"github.com/AgentDank/dank-mcp/internal/catalog"
 )
+
+const cacheTTL = 7 * 24 * time.Hour
 
 // Options configures a Download call.
 type Options struct {
@@ -49,6 +52,16 @@ func Download(ctx context.Context, id string, opts Options) (string, error) {
 	catURL := opts.CatalogURL
 	if catURL == "" {
 		catURL = catalog.DefaultURL
+	}
+
+	// TTL check before any network I/O
+	if !opts.Force {
+		if info, err := os.Stat(opts.CachePath); err == nil {
+			if time.Since(info.ModTime()) < cacheTTL {
+				opts.Logger.Info("cache fresh; skipping download", "id", id, "path", opts.CachePath)
+				return opts.CachePath, nil
+			}
+		}
 	}
 
 	opts.Logger.Info("fetching catalog", "url", catURL)
