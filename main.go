@@ -2,6 +2,7 @@
 package main
 
 import (
+	"context"
 	"database/sql"
 	"fmt"
 	"log/slog"
@@ -10,6 +11,7 @@ import (
 
 	"github.com/AgentDank/dank-mcp/data"
 	"github.com/AgentDank/dank-mcp/internal/db"
+	"github.com/AgentDank/dank-mcp/internal/fetch"
 	"github.com/AgentDank/dank-mcp/internal/mcp"
 	"github.com/spf13/pflag"
 )
@@ -48,8 +50,22 @@ func main() {
 	pflag.StringVarP(&config.MCPConfig.SSEHostPort, "sse-host", "", "", "host:port to listen to SSE connections")
 	pflag.BoolVarP(&config.MCPConfig.UseSSE, "sse", "", false, "Use SSE Transport (default is STDIO transport)")
 	pflag.BoolVarP(&config.Verbose, "verbose", "v", false, "Verbose logging")
+	var fetchID string
+	var fetchOnly, forceFetch bool
+	pflag.StringVarP(&fetchID, "fetch", "", "", "Dataset id to download from dank-data (e.g., us/ct)")
+	pflag.BoolVarP(&fetchOnly, "fetch-only", "", false, "Download only; do not start the MCP server")
+	pflag.BoolVarP(&forceFetch, "force", "", false, "Force re-download even if cache is fresh (requires --fetch)")
 	pflag.BoolVarP(&showHelp, "help", "h", false, "Show help")
 	pflag.Parse()
+
+	if forceFetch && fetchID == "" {
+		fmt.Fprintln(os.Stderr, "--force requires --fetch <id>")
+		os.Exit(2)
+	}
+	if fetchOnly && fetchID == "" {
+		fmt.Fprintln(os.Stderr, "--fetch-only requires --fetch <id>")
+		os.Exit(2)
+	}
 
 	if showHelp {
 		fmt.Fprintf(os.Stdout, "usage: %s [opts]\n\n", os.Args[0])
@@ -103,6 +119,28 @@ func main() {
 	}
 
 	logger.Info("dank-mcp")
+
+	// Optional data fetch from dank-data catalog.
+	if fetchID != "" {
+		cachePath := data.GetDatasetCachePath(fetchID)
+		resolved, err := fetch.Download(context.Background(), fetchID, fetch.Options{
+			CachePath: cachePath,
+			Logger:    logger,
+			Force:     forceFetch,
+		})
+		if err != nil {
+			logger.Error("fetch failed", "id", fetchID, "error", err.Error())
+			os.Exit(1)
+		}
+		if fetchOnly {
+			logger.Info("fetch-only complete", "id", fetchID, "path", resolved)
+			return
+		}
+		// If the user didn't explicitly pass --db, serve from the fetched file.
+		if config.DuckDBFile == "" {
+			config.DuckDBFile = resolved
+		}
+	}
 
 	// Setup DuckDB
 	if config.DuckDBFile == ":memory:" {
