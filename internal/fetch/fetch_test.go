@@ -239,3 +239,55 @@ func TestDownload_StalePast7Days(t *testing.T) {
 		t.Errorf("cache not refreshed; got %q", got)
 	}
 }
+
+func TestDownload_CatalogFailsWithStaleCache(t *testing.T) {
+	// Server always 500s on catalog
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusInternalServerError)
+	}))
+	defer srv.Close()
+
+	tmp := t.TempDir()
+	cachePath := filepath.Join(tmp, "dank-data.duckdb")
+	os.WriteFile(cachePath, []byte("stale-but-usable"), 0o644)
+	old := time.Now().Add(-30 * 24 * time.Hour)
+	os.Chtimes(cachePath, old, old)
+
+	var buf bytes.Buffer
+	logger := slog.New(slog.NewTextHandler(&buf, nil))
+
+	path, err := Download(context.Background(), "us/ct", Options{
+		CatalogURL: srv.URL + "/catalog.json",
+		CachePath:  cachePath,
+		Client:     srv.Client(),
+		Logger:     logger,
+	})
+	if err != nil {
+		t.Fatalf("expected fallback, got error: %v", err)
+	}
+	if path != cachePath {
+		t.Errorf("path = %q", path)
+	}
+	// A warn-level record should have been emitted about the fallback.
+	if !bytes.Contains(buf.Bytes(), []byte("level=WARN")) {
+		t.Errorf("expected WARN log; got:\n%s", buf.String())
+	}
+}
+
+func TestDownload_CatalogFailsNoCache(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusInternalServerError)
+	}))
+	defer srv.Close()
+
+	tmp := t.TempDir()
+	_, err := Download(context.Background(), "us/ct", Options{
+		CatalogURL: srv.URL + "/catalog.json",
+		CachePath:  filepath.Join(tmp, "dank-data.duckdb"),
+		Client:     srv.Client(),
+		Logger:     slog.New(slog.NewTextHandler(io.Discard, nil)),
+	})
+	if err == nil {
+		t.Fatal("expected error with no cache")
+	}
+}

@@ -67,6 +67,12 @@ func Download(ctx context.Context, id string, opts Options) (string, error) {
 	opts.Logger.Info("fetching catalog", "url", catURL)
 	cat, err := catalog.Fetch(ctx, catURL, opts.Client)
 	if err != nil {
+		// If there's a usable cache, degrade gracefully.
+		if info, statErr := os.Stat(opts.CachePath); statErr == nil {
+			opts.Logger.Warn("catalog fetch failed; using stale cache",
+				"err", err, "path", opts.CachePath, "age", time.Since(info.ModTime()).String())
+			return opts.CachePath, nil
+		}
 		return "", fmt.Errorf("catalog: %w", err)
 	}
 	entry, err := cat.Lookup(id)
@@ -91,6 +97,11 @@ func Download(ctx context.Context, id string, opts Options) (string, error) {
 
 	opts.Logger.Info("downloading", "id", id, "url", entry.DuckDBURL)
 	if err := downloadVerified(ctx, opts.Client, entry.DuckDBURL, partialPath, entry.SHA256); err != nil {
+		if info, statErr := os.Stat(opts.CachePath); statErr == nil {
+			opts.Logger.Warn("download failed; using stale cache",
+				"err", err, "path", opts.CachePath, "age", time.Since(info.ModTime()).String())
+			return opts.CachePath, nil
+		}
 		return "", err
 	}
 
