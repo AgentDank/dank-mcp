@@ -6,7 +6,7 @@
 
 **Architecture:** Two new internal packages (`internal/catalog`, `internal/fetch`), a path helper on the existing `data` package, and new flag wiring in `main.go`. The download pipeline streams: HTTP body → sha256 hash-and-copy → `.partial` file → zstd decompress → `.new` file → atomic rename to final path. Progress rendered via `bubbles/progress` on stderr, only when stderr is a TTY; otherwise `slog.Info` fallback.
 
-**Tech Stack:** Go 1.24, stdlib `net/http`, `github.com/klauspost/compress/zstd`, `github.com/charmbracelet/bubbletea`, `github.com/charmbracelet/bubbles/progress`, `golang.org/x/term`.
+**Tech Stack:** Go 1.24, stdlib `net/http`, `github.com/klauspost/compress/zstd`, `charm.land/bubbletea/v2`, `charm.land/bubbles/v2/progress`, `golang.org/x/term`.
 
 **Design spec:** `docs/superpowers/specs/2026-04-21-dank-data-catalog-download-design.md`
 
@@ -22,8 +22,8 @@
 
 ```bash
 go get github.com/klauspost/compress/zstd
-go get github.com/charmbracelet/bubbletea
-go get github.com/charmbracelet/bubbles/progress
+go get charm.land/bubbletea/v2
+go get charm.land/bubbles/v2/progress
 go get golang.org/x/term
 go mod tidy
 ```
@@ -1389,10 +1389,18 @@ import (
 	"io"
 	"os"
 
-	"github.com/charmbracelet/bubbles/progress"
-	tea "github.com/charmbracelet/bubbletea"
+	"charm.land/bubbles/v2/progress"
+	tea "charm.land/bubbletea/v2"
 	"golang.org/x/term"
 )
+
+// NOTE: bubbletea v2 and bubbles v2 have API shifts from v1. Before writing
+// the model, run `go doc charm.land/bubbletea/v2` and
+// `go doc charm.land/bubbles/v2/progress` to confirm: NewProgram options,
+// Program.Send/Wait/Quit, progress.Model construction, and FrameMsg handling.
+// If any method signature below doesn't compile against the v2 API, adjust
+// the code to match v2 and keep the overall structure (TTY gate, stderr
+// output, counting reader pattern) intact.
 
 // progressReporter reports download progress to stderr when stderr is a TTY,
 // and is a no-op otherwise.
