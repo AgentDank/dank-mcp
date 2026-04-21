@@ -95,3 +95,63 @@ func TestDownload_HappyPath(t *testing.T) {
 		t.Errorf("cached bytes mismatch: got %q want %q", got, payload)
 	}
 }
+
+func TestDownload_SHA256Mismatch(t *testing.T) {
+	compressed, _, _ := buildSnapshot(t)
+	badHex := "0000000000000000000000000000000000000000000000000000000000000000"
+	srv := startServer(t, compressed, badHex)
+	defer srv.Close()
+
+	tmp := t.TempDir()
+	cachePath := filepath.Join(tmp, "dank-data.duckdb")
+
+	_, err := Download(context.Background(), "us/ct", Options{
+		CatalogURL: srv.URL + "/catalog.json",
+		CachePath:  cachePath,
+		Client:     srv.Client(),
+		Logger:     slog.New(slog.NewTextHandler(io.Discard, nil)),
+	})
+	if err == nil {
+		t.Fatal("expected sha256 mismatch error")
+	}
+	if _, statErr := os.Stat(cachePath); statErr == nil {
+		t.Error("cached file should not exist after mismatch")
+	}
+}
+
+func TestDownload_Unknown(t *testing.T) {
+	compressed, shaHex, _ := buildSnapshot(t)
+	srv := startServer(t, compressed, shaHex)
+	defer srv.Close()
+
+	tmp := t.TempDir()
+	cachePath := filepath.Join(tmp, "dank-data.duckdb")
+
+	_, err := Download(context.Background(), "us/zz", Options{
+		CatalogURL: srv.URL + "/catalog.json",
+		CachePath:  cachePath,
+		Client:     srv.Client(),
+		Logger:     slog.New(slog.NewTextHandler(io.Discard, nil)),
+	})
+	if err == nil {
+		t.Fatal("expected unknown-id error")
+	}
+}
+
+func TestDownload_Catalog404(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		http.NotFound(w, r)
+	}))
+	defer srv.Close()
+
+	tmp := t.TempDir()
+	_, err := Download(context.Background(), "us/ct", Options{
+		CatalogURL: srv.URL + "/catalog.json",
+		CachePath:  filepath.Join(tmp, "dank-data.duckdb"),
+		Client:     srv.Client(),
+		Logger:     slog.New(slog.NewTextHandler(io.Discard, nil)),
+	})
+	if err == nil {
+		t.Fatal("expected error")
+	}
+}
