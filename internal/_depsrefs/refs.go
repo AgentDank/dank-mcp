@@ -6,8 +6,8 @@
 package depsrefs
 
 import (
-	_ "github.com/charmbracelet/bubbles/progress"
-	_ "github.com/charmbracelet/bubbletea"
+	_ "charm.land/bubbles/v2/progress"
+	_ "charm.land/bubbletea/v2"
 	_ "github.com/klauspost/compress/zstd"
 	_ "golang.org/x/term"
 )
