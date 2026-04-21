@@ -3,7 +3,7 @@
 `dank-mcp` is a Model Context Protocol (MCP) server for querying cannabis datasets. It is brought to you by AgentDank for educational and legal purposes.
 
 > [!NOTE]
-> **Status: under refactor.** `dank-mcp` is being reworked toward a generic, declarative dataset-binding architecture (see [Notes on Design](#notes-on-design)). **No datasets are bundled in the current build** — the server exposes a generic read-only SQL tool over a locked-down DuckDB. You can point it at an existing DuckDB file via `--db`.
+> **Status: under refactor.** `dank-mcp` is being reworked toward a generic, declarative dataset-binding architecture (see [Notes on Design](#notes-on-design)). You can bootstrap a dataset via `--fetch <id>`, which downloads a prebuilt snapshot from [`dank-data`](https://github.com/AgentDank/dank-data). Today the only dataset is `us/ct`.
 
 <p align="center"><video controls src="https://private-user-images.githubusercontent.com/26842/430672597-adb8e56f-178d-4646-9e0f-4fcf57614dea.mp4" title="AgentDank "></video></p>
 
@@ -13,6 +13,7 @@
   * [Using with LLMs](#usage)
     * [Claude Desktop](#claude-desktop)
     * [Ollama and mcphost](#ollama-and-mcphost)
+  * [Loading Data](#loading-data)
   * [Command Line Usage](#command-line-usage)
   * [Building](#building)
   * [Notes on Design](#notes-on-design)
@@ -70,6 +71,21 @@ $ mcphost -m ollama:llama3.3 --config mcp-config.json
 ...chat away...
 ```
 
+## Loading Data
+
+`dank-mcp` can download a prebuilt DuckDB snapshot from the [AgentDank `dank-data`](https://github.com/AgentDank/dank-data) repo:
+
+```sh
+$ dank-mcp --list                     # show available datasets
+$ dank-mcp --fetch us/ct              # download and serve
+$ dank-mcp --fetch us/ct --fetch-only # download and exit
+$ dank-mcp --fetch us/ct --force      # force re-download
+```
+
+Downloads are cached at `.dank/cache/<id>/dank-data.duckdb` under `--root` (or the current directory). The cache is re-used for 7 days before a new download happens; use `--force` to override.
+
+The snapshot's SHA-256 is verified against the catalog before install, and the local file is atomically replaced via rename — there's no window where a torn file is visible.
+
 ## Command Line Usage
 
 Here is the command-line help:
@@ -78,7 +94,11 @@ Here is the command-line help:
 usage: ./bin/dank-mcp [opts]
 
       --db string         DuckDB data file to use, use ':memory:' for in-memory. Default is '.dank/dank-mcp.duckdb' under --root
+      --fetch string      Dataset id to download from dank-data (e.g., us/ct)
+      --fetch-only        Download only; do not start the MCP server
+      --force             Force re-download even if cache is fresh (requires --fetch)
   -h, --help              Show help
+      --list              List datasets from the dank-data catalog and exit
   -l, --log-file string   Log file destination (or MCP_LOG_FILE envvar). Default is stderr
   -j, --log-json          Log in JSON (default is plaintext)
       --root string       Set root location of '.dank' dir (Default: current dir)
