@@ -144,7 +144,10 @@ func downloadVerified(ctx context.Context, client *http.Client, url, partialPath
 	}
 	defer f.Close()
 
-	if _, err := copyAndVerify(f, resp.Body, sha256Hex); err != nil {
+	reporter := newProgressReporter(resp.ContentLength)
+	defer reporter.finish()
+
+	if _, err := copyAndVerify(f, reporter.wrap(resp.Body), sha256Hex); err != nil {
 		return err
 	}
 	return nil
