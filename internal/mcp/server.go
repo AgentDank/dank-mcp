@@ -10,11 +10,6 @@ import (
 	mcp_server "github.com/mark3labs/mcp-go/server"
 )
 
-const (
-	regex10  = `^(0(\.\d+)?|1(\.0+)?)$`
-	regexInt = `^[0-9]*$`
-)
-
 // Config is configuration for our MCP server
 type Config struct {
 	Name    string // Service Name

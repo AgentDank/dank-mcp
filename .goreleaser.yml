@@ -1,0 +1,82 @@
+# .goreleaser.yml file
+# dank-mcp - another AgentDank joint
+# Copyright (c) 2025 Neomantra Corp
+# yaml-language-server: $schema=https://goreleaser.com/static/schema.json
+# vim: set ts=2 sw=2 tw=0 fo=cnqoj
+
+version: 2
+
+project_name: dank-mcp
+
+before:
+  hooks:
+    - go mod tidy
+
+builds:
+  - main: main.go
+    id: dank-mcp
+    binary: dank-mcp
+    flags:
+      - -tags=no_duckdb_arrow
+    env:
+      - CGO_ENABLED=0
+    goarch:
+      # go-duckdb only supports these
+      - amd64
+      - arm64
+    goos:
+      - linux
+      - darwin
+    ignore:
+      # duckdb does not support these
+      - goos: windows
+        goarch: arm64
+
+archives:
+  - formats: [tar.gz]
+    name_template: >-
+      {{ .ProjectName }}_
+      {{- title .Os }}_
+      {{- if eq .Arch "amd64" }}x86_64
+      {{- else if eq .Arch "386" }}i386
+      {{- else }}{{ .Arch }}{{ end }}
+      {{- if .Arm }}v{{ .Arm }}{{ end }}
+    format_overrides:
+      - goos: windows
+        formats: [zip]
+
+checksum:
+  name_template: 'checksums.txt'
+
+snapshot:
+  version_template: "{{ incpatch .Version }}-next"
+
+changelog:
+  sort: asc
+  filters:
+    exclude:
+      - "^docs:"
+      - "^test:"
+
+universal_binaries:
+  - replace: true
+
+release:
+  github:
+    owner: AgentDank
+    name: dank-mcp
+
+brews:
+  - homepage: https://github.com/AgentDank/dank-mcp
+    description: "AgentDank MCP Server"
+    directory: Formula
+    repository:
+      owner: AgentDank
+      name: homebrew-tap
+      branch: main
+      token: "{{ .Env.HOMEBREW_TAP_GITHUB_TOKEN }}"
+    commit_author:
+      name: goreleaserbot
+      email: goreleaserbot@neomantra.net
+    install: |
+      bin.install "dank-mcp"

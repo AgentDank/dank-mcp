@@ -23,11 +23,20 @@ func SetDankRoot(root string) {
 	dankRoot = root
 }
 
-// EnsureDankRoot ensures the current DankRoot exists, creating it if needed.
-// Returns an error, if any.
-func EnsureDankRoot() error {
+// EnsureDankPath ensures the current DankRoot exists and any sub-path, creating it if needed.
+// Passing no arguments ensures DankRoot exists. Returns an error, if any.
+// Returns the fullPath in the second return value.
+func EnsureDankPath(path ...string) (string, error) {
 	dankDir := GetDankDir()
-	return os.MkdirAll(dankDir, os.ModePerm)
+	if dankDir == "" {
+		return "", fmt.Errorf("DankDir is not set")
+	}
+	fullPath := filepath.Join(append([]string{dankDir}, path...)...)
+	err := os.MkdirAll(fullPath, os.ModePerm)
+	if err != nil {
+		return "", err
+	}
+	return fullPath, nil
 }
 
 // GetDankDir returns the path to the DankDir directory.
