@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"regexp"
 	"time"
 )
 
@@ -94,4 +95,19 @@ func MakeCacheFile(filename string) (*os.File, error) {
 // downloaded DuckDB under the dank root: .dank/cache/<id>/dank-data.duckdb
 func GetDatasetCachePath(id string) string {
 	return filepath.Join(GetDankCacheDir(), filepath.FromSlash(id), "dank-data.duckdb")
+}
+
+// datasetIDPattern matches the expected shape of a dank-data dataset id:
+// two-letter region code, slash, and a name of lowercase alphanumerics,
+// hyphens, or underscores. Rejects anything that could escape the cache
+// directory (e.g., "..", leading "/", backslashes).
+var datasetIDPattern = regexp.MustCompile(`^[a-z]{2}/[a-z0-9_-]+$`)
+
+// ValidateDatasetID rejects dataset ids that do not conform to the
+// expected shape. Returns nil on success.
+func ValidateDatasetID(id string) error {
+	if !datasetIDPattern.MatchString(id) {
+		return fmt.Errorf("invalid dataset id %q: must match %s", id, datasetIDPattern.String())
+	}
+	return nil
 }

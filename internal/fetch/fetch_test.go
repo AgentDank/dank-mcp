@@ -291,3 +291,21 @@ func TestDownload_CatalogFailsNoCache(t *testing.T) {
 		t.Fatal("expected error with no cache")
 	}
 }
+
+func TestDownload_RejectsUnsafeID(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		t.Errorf("unexpected request for unsafe id to %s", r.URL.Path)
+	}))
+	defer srv.Close()
+
+	tmp := t.TempDir()
+	_, err := Download(context.Background(), "../../etc/passwd", Options{
+		CatalogURL: srv.URL + "/catalog.json",
+		CachePath:  filepath.Join(tmp, "dank-data.duckdb"),
+		Client:     srv.Client(),
+		Logger:     slog.New(slog.NewTextHandler(io.Discard, nil)),
+	})
+	if err == nil {
+		t.Fatal("expected validation error for unsafe id")
+	}
+}

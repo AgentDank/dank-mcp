@@ -13,6 +13,7 @@ import (
 	"path/filepath"
 	"time"
 
+	"github.com/AgentDank/dank-mcp/data"
 	"github.com/AgentDank/dank-mcp/internal/catalog"
 )
 
@@ -48,6 +49,9 @@ func Download(ctx context.Context, id string, opts Options) (string, error) {
 	}
 	if opts.CachePath == "" {
 		return "", fmt.Errorf("fetch.Download: CachePath is required")
+	}
+	if err := data.ValidateDatasetID(id); err != nil {
+		return "", err
 	}
 	catURL := opts.CatalogURL
 	if catURL == "" {
