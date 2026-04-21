@@ -36,6 +36,16 @@ tasks:
       - go.mod
       - go.sum
 
+  test:
+    desc: 'Run Go tests'
+    cmds:
+      - go test ./...
+    sources:
+      - "*.go"
+      - "data/**/*.go"
+      - "internal/**/*.go"
+      - "pkg/**/*.go"
+
   clean-cache:
     desc: 'Clean cache dir'
     cmds:
