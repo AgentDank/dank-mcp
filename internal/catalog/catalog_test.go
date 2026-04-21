@@ -78,3 +78,25 @@ func TestParse_IgnoresUnknownFields(t *testing.T) {
 		t.Errorf("unexpected error: %v", err)
 	}
 }
+
+func TestLookup_Hit(t *testing.T) {
+	cat, _ := Parse([]byte(validCatalog))
+	entry, err := cat.Lookup("us/ct")
+	if err != nil {
+		t.Fatalf("Lookup: %v", err)
+	}
+	if entry.Title != "United States — Connecticut" {
+		t.Errorf("unexpected entry: %+v", entry)
+	}
+}
+
+func TestLookup_MissIncludesKnownIDs(t *testing.T) {
+	cat, _ := Parse([]byte(validCatalog))
+	_, err := cat.Lookup("us/zz")
+	if err == nil {
+		t.Fatal("expected error")
+	}
+	if !strings.Contains(err.Error(), "us/ct") {
+		t.Errorf("error should list known ids: %v", err)
+	}
+}

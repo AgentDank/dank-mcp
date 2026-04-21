@@ -6,6 +6,7 @@ package catalog
 import (
 	"encoding/json"
 	"fmt"
+	"sort"
 )
 
 const currentVersion = 1
@@ -43,4 +44,18 @@ func Parse(body []byte) (Catalog, error) {
 		}
 	}
 	return c, nil
+}
+
+// Lookup returns the entry for the given dataset id, or an error listing
+// the known ids if the id is not in the catalog.
+func (c Catalog) Lookup(id string) (DatasetEntry, error) {
+	if entry, ok := c.Datasets[id]; ok {
+		return entry, nil
+	}
+	known := make([]string, 0, len(c.Datasets))
+	for k := range c.Datasets {
+		known = append(known, k)
+	}
+	sort.Strings(known)
+	return DatasetEntry{}, fmt.Errorf("unknown dataset %q; known ids: %v", id, known)
 }
