@@ -8,3 +8,4 @@ dist/
 # don't commit cache files!
 .dank
 dank-mcp.duckdb
+dank-mcp.duckdb.zst
