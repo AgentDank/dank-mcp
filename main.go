@@ -57,6 +57,7 @@ func main() {
 	pflag.BoolVarP(&forceFetch, "force", "", false, "Force re-download even if cache is fresh (requires --fetch)")
 	pflag.BoolVarP(&showHelp, "help", "h", false, "Show help")
 	pflag.Parse()
+	dbFlagSet := pflag.Lookup("db").Changed
 
 	if forceFetch && fetchID == "" {
 		fmt.Fprintln(os.Stderr, "--force requires --fetch <id>")
@@ -87,10 +88,6 @@ func main() {
 		fmt.Fprintf(os.Stderr, "Cannot access Dank root dir:'%s' err:%s\n", data.GetDankDir(), err.Error())
 		os.Exit(1)
 	}
-	if config.DuckDBFile == "" {
-		config.DuckDBFile = filepath.Join(data.GetDankDir(), defaultDBFile)
-	}
-
 	// Set up logging
 	logWriter := os.Stderr // default is stderr
 	if logFilename == "" { // prefer CLI option
@@ -137,9 +134,13 @@ func main() {
 			return
 		}
 		// If the user didn't explicitly pass --db, serve from the fetched file.
-		if config.DuckDBFile == "" {
+		if !dbFlagSet {
 			config.DuckDBFile = resolved
 		}
+	}
+
+	if config.DuckDBFile == "" {
+		config.DuckDBFile = filepath.Join(data.GetDankDir(), defaultDBFile)
 	}
 
 	// Setup DuckDB
