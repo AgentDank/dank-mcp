@@ -9,7 +9,7 @@ import (
 	"strings"
 
 	// Import the DuckDB driver
-	_ "github.com/marcboeker/go-duckdb/v2"
+	_ "github.com/duckdb/duckdb-go/v2"
 )
 
 //go:embed duckdb_up.sql

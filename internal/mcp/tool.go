@@ -31,8 +31,8 @@ func RegisterQueryTool(mcpServer *mcp_server.MCPServer, conn *sql.DB) error {
 
 func makeQueryHandler(conn *sql.DB) func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 	return func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-		queryStr, ok := request.Params.Arguments["sql"].(string)
-		if !ok {
+		queryStr, err := request.RequireString("sql")
+		if err != nil {
 			return nil, errors.New("sql must be set")
 		}
 
