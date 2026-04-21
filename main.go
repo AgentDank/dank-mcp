@@ -8,8 +8,10 @@ import (
 	"log/slog"
 	"os"
 	"path/filepath"
+	"sort"
 
 	"github.com/AgentDank/dank-mcp/data"
+	"github.com/AgentDank/dank-mcp/internal/catalog"
 	"github.com/AgentDank/dank-mcp/internal/db"
 	"github.com/AgentDank/dank-mcp/internal/fetch"
 	"github.com/AgentDank/dank-mcp/internal/mcp"
@@ -52,9 +54,11 @@ func main() {
 	pflag.BoolVarP(&config.Verbose, "verbose", "v", false, "Verbose logging")
 	var fetchID string
 	var fetchOnly, forceFetch bool
+	var listCatalog bool
 	pflag.StringVarP(&fetchID, "fetch", "", "", "Dataset id to download from dank-data (e.g., us/ct)")
 	pflag.BoolVarP(&fetchOnly, "fetch-only", "", false, "Download only; do not start the MCP server")
 	pflag.BoolVarP(&forceFetch, "force", "", false, "Force re-download even if cache is fresh (requires --fetch)")
+	pflag.BoolVarP(&listCatalog, "list", "", false, "List datasets from the dank-data catalog and exit")
 	pflag.BoolVarP(&showHelp, "help", "h", false, "Show help")
 	pflag.Parse()
 	dbFlagSet := pflag.Lookup("db").Changed
@@ -71,6 +75,25 @@ func main() {
 	if showHelp {
 		fmt.Fprintf(os.Stdout, "usage: %s [opts]\n\n", os.Args[0])
 		pflag.PrintDefaults()
+		os.Exit(0)
+	}
+
+	if listCatalog {
+		cat, err := catalog.Fetch(context.Background(), catalog.DefaultURL, nil)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "failed to fetch catalog: %s\n", err.Error())
+			os.Exit(1)
+		}
+		ids := make([]string, 0, len(cat.Datasets))
+		for id := range cat.Datasets {
+			ids = append(ids, id)
+		}
+		sort.Strings(ids)
+		fmt.Fprintln(os.Stdout, "ID\tTITLE\tUPDATED\tDESCRIPTION")
+		for _, id := range ids {
+			e := cat.Datasets[id]
+			fmt.Fprintf(os.Stdout, "%s\t%s\t%s\t%s\n", id, e.Title, e.UpdatedAt, e.Description)
+		}
 		os.Exit(0)
 	}
 
