@@ -176,13 +176,6 @@ func main() {
 		os.Exit(1)
 	}
 
-	err = db.RunMigration(duckdbConn)
-	if err != nil {
-		logger.Error("failed to run duckdb migration", "error", err.Error())
-		duckdbConn.Close()
-		os.Exit(1)
-	}
-
 	// Reload our DuckDB in read-only mode for security
 	duckdbConn.Close()
 	duckdbConnRO, err := sql.Open("duckdb", config.DuckDBFile+"?access_mode=read_only")
