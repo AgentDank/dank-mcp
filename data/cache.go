@@ -33,7 +33,7 @@ func EnsureDankPath(path ...string) (string, error) {
 		return "", fmt.Errorf("DankDir is not set")
 	}
 	fullPath := filepath.Join(append([]string{dankDir}, path...)...)
-	err := os.MkdirAll(fullPath, os.ModePerm)
+	err := os.MkdirAll(fullPath, 0o755) // 0o755 is rwxr-xr-x
 	if err != nil {
 		return "", err
 	}
