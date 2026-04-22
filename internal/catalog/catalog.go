@@ -10,7 +10,14 @@ import (
 	"io"
 	"net/http"
 	"sort"
+	"time"
 )
+
+const maxCatalogSize = 10 * 1024 * 1024 // 10 MiB
+
+var defaultClient = &http.Client{
+	Timeout: 30 * time.Second,
+}
 
 const (
 	currentVersion = 1
@@ -72,7 +79,7 @@ func (c Catalog) Lookup(id string) (DatasetEntry, error) {
 // http.DefaultClient.
 func Fetch(ctx context.Context, url string, client *http.Client) (Catalog, error) {
 	if client == nil {
-		client = http.DefaultClient
+		client = defaultClient
 	}
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
 	if err != nil {
@@ -86,7 +93,10 @@ func Fetch(ctx context.Context, url string, client *http.Client) (Catalog, error
 	if resp.StatusCode != http.StatusOK {
 		return Catalog{}, fmt.Errorf("fetch catalog: HTTP %d", resp.StatusCode)
 	}
-	body, err := io.ReadAll(resp.Body)
+	if resp.ContentLength > maxCatalogSize {
+		return Catalog{}, fmt.Errorf("fetch catalog: response too large (%d bytes)", resp.ContentLength)
+	}
+	body, err := io.ReadAll(io.LimitReader(resp.Body, maxCatalogSize))
 	if err != nil {
 		return Catalog{}, fmt.Errorf("read catalog body: %w", err)
 	}

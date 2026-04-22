@@ -7,6 +7,7 @@ package fetch
 import (
 	"context"
 	"fmt"
+	"io"
 	"log/slog"
 	"net/http"
 	"os"
@@ -16,6 +17,12 @@ import (
 	"github.com/AgentDank/dank-mcp/data"
 	"github.com/AgentDank/dank-mcp/internal/catalog"
 )
+
+const maxDownloadSize = 2 << 30 // 2 GiB
+
+var defaultClient = &http.Client{
+	Timeout: 30 * time.Second,
+}
 
 const cacheTTL = 7 * 24 * time.Hour
 
@@ -127,7 +134,7 @@ func Download(ctx context.Context, id string, opts Options) (string, error) {
 
 func downloadVerified(ctx context.Context, client *http.Client, url, partialPath, sha256Hex string) error {
 	if client == nil {
-		client = http.DefaultClient
+		client = defaultClient
 	}
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
 	if err != nil {
@@ -141,6 +148,9 @@ func downloadVerified(ctx context.Context, client *http.Client, url, partialPath
 	if resp.StatusCode != http.StatusOK {
 		return fmt.Errorf("GET %s: HTTP %d", url, resp.StatusCode)
 	}
+	if resp.ContentLength > maxDownloadSize {
+		return fmt.Errorf("GET %s: response too large (%d bytes)", url, resp.ContentLength)
+	}
 
 	f, err := os.Create(partialPath)
 	if err != nil {
@@ -151,7 +161,7 @@ func downloadVerified(ctx context.Context, client *http.Client, url, partialPath
 	reporter := newProgressReporter(resp.ContentLength)
 	defer reporter.finish()
 
-	if _, err := copyAndVerify(f, reporter.wrap(resp.Body), sha256Hex); err != nil {
+	if _, err := copyAndVerify(f, reporter.wrap(io.LimitReader(resp.Body, maxDownloadSize)), sha256Hex); err != nil {
 		return err
 	}
 	return nil
