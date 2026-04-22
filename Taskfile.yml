@@ -61,5 +61,22 @@ tasks:
     desc: 'Extracts the schema from the stdio server'
     deps: [build]
     cmds:
-      - echo '{"method":"tools/list","params":{},"jsonrpc":"2.0","id":1}' | ./bin/dank-mcp --no-fetch 2>/dev/null
-      - echo '{"method":"resources/list","params":{},"jsonrpc":"2.0","id":1}' | ./bin/dank-mcp --no-fetch 2>/dev/null
+      - echo '{"method":"tools/list","params":{},"jsonrpc":"2.0","id":1}' | ./bin/dank-mcp 2>/dev/null
+      - echo '{"method":"resources/list","params":{},"jsonrpc":"2.0","id":1}' | ./bin/dank-mcp 2>/dev/null
+
+  goreleaser:check:
+    desc: 'Validate GoReleaser configuration'
+    cmds:
+      - goreleaser check
+
+  goreleaser:build:
+    desc: 'Build binary for current platform only (fast, no publish)'
+    deps: [goreleaser:check]
+    cmds:
+      - goreleaser build --snapshot --clean --single-target
+
+  goreleaser:snapshot:
+    desc: 'Build full local snapshot (archives, checksums, no publish). Requires CGO cross-compilers for non-host targets.'
+    deps: [goreleaser:check]
+    cmds:
+      - goreleaser release --snapshot --clean

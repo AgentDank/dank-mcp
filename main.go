@@ -15,18 +15,18 @@ import (
 	"github.com/AgentDank/dank-mcp/internal/db"
 	"github.com/AgentDank/dank-mcp/internal/fetch"
 	"github.com/AgentDank/dank-mcp/internal/mcp"
+	"github.com/AgentDank/dank-mcp/internal/version"
 	"github.com/spf13/pflag"
 )
 
 ///////////////////////////////////////////////////////////////////////////////
 
 const (
-	mcpServerName    = "dank-mcp"
-	mcpServerVersion = "0.0.1"
+	mcpServerName = "dank-mcp"
 
 	defaultSSEHostPort = ":8889"
 	defaultDBFile      = "dank-mcp.duckdb"
-	defaultLogDest     = "dank-mcp.log"
+	_                  = "dank-mcp.log" // reserved for future --log-file default
 )
 
 type Config struct {
@@ -73,7 +73,7 @@ func main() {
 	}
 
 	if showHelp {
-		fmt.Fprintf(os.Stdout, "usage: %s [opts]\n\n", os.Args[0])
+		fmt.Fprintf(os.Stdout, "dank-mcp v%s\nusage: %s [opts]\n\n", version.Get(), os.Args[0])
 		pflag.PrintDefaults()
 		os.Exit(0)
 	}
@@ -102,7 +102,7 @@ func main() {
 	}
 
 	config.MCPConfig.Name = mcpServerName
-	config.MCPConfig.Version = mcpServerVersion
+	config.MCPConfig.Version = version.Get()
 
 	if dankRoot != "" {
 		data.SetDankRoot(dankRoot)

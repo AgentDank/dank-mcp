@@ -16,19 +16,18 @@ builds:
   - main: main.go
     id: dank-mcp
     binary: dank-mcp
-    flags:
-      - -tags=no_duckdb_arrow
-    env:
-      - CGO_ENABLED=0
+    ldflags:
+      - -s -w -X github.com/AgentDank/dank-mcp/internal/version.Version={{.Version}}
     goarch:
-      # go-duckdb only supports these
+      # duckdb-go only supports these
       - amd64
       - arm64
     goos:
       - linux
       - darwin
+      - windows
     ignore:
-      # duckdb does not support these
+      # duckdb-go does not support these
       - goos: windows
         goarch: arm64
 
@@ -47,6 +46,22 @@ archives:
 
 checksum:
   name_template: 'checksums.txt'
+
+notarize:
+  macos:
+    - enabled: '{{ isEnvSet "MACOS_SIGN_P12" }}'
+      ids:
+        - dank-mcp
+      sign:
+        certificate: "{{.Env.MACOS_SIGN_P12}}"
+        password: "{{.Env.MACOS_SIGN_PASSWORD}}"
+        entitlements: ./etc/entitlements.plist
+      notarize:
+        issuer_id: "{{.Env.MACOS_NOTARY_ISSUER_ID}}"
+        key_id: "{{.Env.MACOS_NOTARY_KEY_ID}}"
+        key: "{{.Env.MACOS_NOTARY_KEY}}"
+        wait: true
+        timeout: 20m
 
 snapshot:
   version_template: "{{ incpatch .Version }}-next"
