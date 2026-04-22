@@ -1,0 +1,50 @@
+# Release workflow — cuts a goreleaser release on tag push (v*).
+#
+# Runs on macOS so that darwin builds + notarization work natively.
+# Linux and Windows cross-compilation requires CGO cross-compilers
+# (duckdb-go is CGO-heavy); until those are installed in a pre-step,
+# expect goreleaser to fail on the non-darwin targets in .goreleaser.yml.
+# Options for extending:
+#   - brew install FiloSottile/musl-cross/musl-cross (linux)
+#   - brew install mingw-w64 (windows)
+#   - or move to ghcr.io/goreleaser/goreleaser-cross (drops notarization).
+
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: macos-14
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.25'
+          check-latest: true
+
+      - name: Run goreleaser
+        uses: goreleaser/goreleaser-action@v6
+        with:
+          distribution: goreleaser
+          version: '~> v2'
+          args: release --clean
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          HOMEBREW_TAP_GITHUB_TOKEN: ${{ secrets.HOMEBREW_TAP_GITHUB_TOKEN }}
+          MACOS_SIGN_P12: ${{ secrets.MACOS_SIGN_P12 }}
+          MACOS_SIGN_PASSWORD: ${{ secrets.MACOS_SIGN_PASSWORD }}
+          MACOS_NOTARY_ISSUER_ID: ${{ secrets.MACOS_NOTARY_ISSUER_ID }}
+          MACOS_NOTARY_KEY_ID: ${{ secrets.MACOS_NOTARY_KEY_ID }}
+          MACOS_NOTARY_KEY: ${{ secrets.MACOS_NOTARY_KEY }}
