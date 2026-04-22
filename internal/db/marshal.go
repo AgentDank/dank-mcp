@@ -11,6 +11,9 @@ import (
 
 // RowsToCSV converts sql.Rows rows to a CSV string.
 func RowsToCSV(rows *sql.Rows) (string, error) {
+	if rows == nil {
+		return "", fmt.Errorf("rows is nil")
+	}
 	// Get column names
 	columns, err := rows.Columns()
 	if err != nil {

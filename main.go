@@ -192,7 +192,7 @@ func main() {
 	}
 
 	// Run our MCP server
-	mcp.SetDatabase(duckdbConnRO)
+	config.MCPConfig.DB = duckdbConnRO
 	err = mcp.RunRouter(config.MCPConfig, logger, mcp.ToolMap{
 		"query": mcp.RegisterQueryTool,
 	})
